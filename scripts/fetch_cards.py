@@ -444,7 +444,39 @@ def dump(path, obj):
     path.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
-def write_outputs(cards):
+MONTHS = {m: i for i, m in enumerate(
+    ["january", "february", "march", "april", "may", "june", "july", "august", "september",
+     "october", "november", "december"], 1)}
+
+
+def parse_release(text):
+    """'April 22, 2006' -> '2006-04-22'; 'March, 2004' -> '2004-03'; else None."""
+    m = re.search(r"([A-Za-z]+)\.?\s*(\d{1,2})?(?:st|nd|rd|th)?\s*,?\s*(\d{4})", text or "")
+    if not m or m.group(1).lower() not in MONTHS:
+        return None
+    ym = f"{m.group(3)}-{MONTHS[m.group(1).lower()]:02d}"
+    return f"{ym}-{int(m.group(2)):02d}" if m.group(2) else ym
+
+
+def load_set_dates(fulls, refresh):
+    """{full set page title: ISO release date} from the Infobox Booster Pack of each set page."""
+    out = {}
+    for batch in chunks(sorted(fulls), BATCH):
+        data = api({"action": "query", "prop": "revisions", "rvprop": "content", "rvslots": "main",
+                    "titles": "|".join(batch), "redirects": "1"}, refresh)["query"]
+        back = {r["to"]: r["from"] for r in data.get("redirects", [])}
+        for pg in data.get("pages", []):
+            if pg.get("missing") or "revisions" not in pg:
+                continue
+            text = pg["revisions"][0]["slots"]["main"]["content"]
+            m = re.search(r"\|\s*Release\s*=\s*([^\n|]*)", text, re.I)
+            date = parse_release(clean(m.group(1))) if m else None
+            if date:
+                out[back.get(pg["title"], pg["title"])] = date
+    return out
+
+
+def write_outputs(cards, refresh=False):
     # unique ids
     used = Counter()
     for c in cards:
@@ -474,9 +506,15 @@ def write_outputs(cards):
         })
         for pr in prints:
             s = sets.setdefault(pr["set_code"], {"code": pr["set_code"], "nome": pr["set_nome"],
-                                                 "formato": pr["formato"], "n": 0, "img": None})
+                                                 "formato": pr["formato"], "n": 0, "img": None,
+                                                 "_full": pr["set_completo"]})
             s["n"] += 1
             s["img"] = s["img"] or c["url_immagine"]
+
+    dates = load_set_dates({s["_full"] for s in sets.values()}, refresh)
+    for s in sets.values():
+        s["data"] = dates.get(s.pop("_full"))
+    print(f"  release dates for {sum(1 for s in sets.values() if s['data'])}/{len(sets)} sets")
 
     dump(DATA / "index.json", index)
     dump(DATA / "sets.json", sorted(sets.values(), key=lambda s: s["code"]))
@@ -520,7 +558,7 @@ def main():
     resolve_images(cards, args.refresh)
     cards.sort(key=lambda c: (c["nome_en"].lower(), c["id"]))
     DATA.mkdir(exist_ok=True)
-    write_outputs(cards)
+    write_outputs(cards, args.refresh)
 
 
 if __name__ == "__main__":

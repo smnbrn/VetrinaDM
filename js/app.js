@@ -171,15 +171,34 @@
   }
 
   // ---------- sets view ----------
+  // Release date -> "11 apr 2026" / "mar 2004"
+  function fmtDate(d) {
+    if (!d) return "";
+    const [y, m, day] = d.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, day || 1));
+    return dt.toLocaleDateString("it-IT", { timeZone: "UTC", year: "numeric", month: "short", ...(day ? { day: "numeric" } : {}) });
+  }
+
+  // Newest first, like the MTG set list; sets without a date go last.
+  const byDateDesc = (a, b) => (b.data || "").localeCompare(a.data || "") || natural(b.code, a.code);
+
   function renderSets() {
     const items = sets.filter((s) => (!state.formato || s.formato === state.formato) &&
       (!state.q || norm(s.code + " " + s.nome).includes(state.q)));
     el.count.textContent = `${items.length} set`;
-    el.setsList.innerHTML = items.map((s) => `<li><button class="tile set-tile" type="button" data-set="${esc(s.code)}">
-      <div class="art"><img src="${esc(cdn(s.img, 240))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>
-      <span class="badge-t">${esc(s.formato)}</span>
-      <div class="info"><div class="name">${esc(s.code)}</div><div class="sub">${esc(s.nome)} · ${s.n} carte</div></div>
-    </button></li>`).join("");
+    let year = null, html = "";
+    for (const s of items) {
+      const y = s.data ? s.data.slice(0, 4) : "Senza data";
+      if (y !== year) { year = y; html += `<li class="year" aria-hidden="true">${esc(y)}</li>`; }
+      html += `<li><button class="tile set-tile" type="button" data-set="${esc(s.code)}">
+        <div class="art"><img src="${esc(cdn(s.img, 240))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>
+        <span class="badge-t">${esc(s.formato)}</span>
+        <div class="info"><div class="name">${esc(s.code)}</div>
+          <div class="sub">${esc(s.nome)}</div>
+          <div class="sub">${esc([fmtDate(s.data), s.n + " carte"].filter(Boolean).join(" · "))}</div></div>
+      </button></li>`;
+    }
+    el.setsList.innerHTML = html;
     el.empty.hidden = items.length > 0;
   }
 
@@ -467,7 +486,7 @@
     const counts = (arr) => { const m = new Map(); arr.forEach((v) => v && m.set(v, (m.get(v) || 0) + 1)); return m; };
     const types = [...counts(cards.map((c) => c.tipo))].sort((a, b) => b[1] - a[1]);
     fillSelect(el.tipo, "Tutti i tipi", types.map(([t]) => [t, t]));
-    fillSelect(el.set, "Tutti i set", sets.map((s) => [s.code, `${s.code} · ${s.nome}`]));
+    fillSelect(el.set, "Tutti i set", sets.map((s) => [s.code, `${s.code} · ${s.nome}${s.data ? " (" + s.data.slice(0, 4) + ")" : ""}`]));
     const rar = [...counts(cards.flatMap((c) => c.P.map((p) => p[2])))].map(([r]) => r);
     const rank = (r) => { const i = RARITY_ORDER.indexOf(r); return i < 0 ? 99 : i; };
     rar.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
@@ -575,7 +594,7 @@
   Promise.all([getJson("data/index.json"), getJson("data/sets.json"), getJson("data/images.json").catch(() => [])])
     .then(([idx, setList, imgs]) => {
       localImages = new Set(imgs);
-      sets = setList.sort((a, b) => natural(a.code, b.code));
+      sets = setList.sort(byDateDesc);
       setMap = new Map(sets.map((s) => [s.code, s]));
       cards = idx.map((r) => ({
         id: r.id, nome_en: r.n, nome_jp: r.j, nome_it: r.i, civilta: r.c, costo: r.k, potere_num: r.p,
