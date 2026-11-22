@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vetrina DM — Duel Masters</title>
+<meta name="description" content="Vetrina non ufficiale delle carte di Duel Masters: cerca e filtra per civiltà, costo, tipo, set e rarità.">
+<meta name="theme-color" content="#08090c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vetrina DM">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/stile.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="top-row">
+    <h1>Vetrina <span>DM</span></h1>
+    <p class="count" id="count" aria-live="polite"></p>
+  </div>
+  <div class="top-row">
+    <label class="search">
+      <span class="sr">Cerca una carta</span>
+      <input id="q" type="search" placeholder="Cerca per nome (EN / JP / IT) o testo…" autocomplete="off" enterkeyhint="search">
+    </label>
+    <button id="setsBtn" class="btn" type="button" aria-pressed="false">Set</button>
+    <button id="filtersBtn" class="btn" type="button" aria-expanded="false" aria-controls="filters">Filtri<span class="badge" id="filtersBadge" hidden></span></button>
+  </div>
+</header>
+
+<section id="filters" class="filters" aria-label="Filtri" hidden>
+  <div class="field">
+    <span class="label">Civiltà</span>
+    <div class="civs" id="civs" role="group" aria-label="Civiltà"></div>
+  </div>
+
+  <div class="field">
+    <span class="label">Costo</span>
+    <div class="range">
+      <input id="costMin" type="number" inputmode="numeric" min="0" placeholder="Da" aria-label="Costo minimo">
+      <span>–</span>
+      <input id="costMax" type="number" inputmode="numeric" min="0" placeholder="A" aria-label="Costo massimo">
+    </div>
+  </div>
+
+  <label class="field"><span class="label">Tipo</span><select id="tipo"></select></label>
+  <label class="field"><span class="label">Set</span><select id="set"></select></label>
+  <label class="field"><span class="label">Rarità</span><select id="rarita"></select></label>
+  <label class="field"><span class="label">Ordina per</span>
+    <select id="sort">
+      <option value="nome">Nome (A–Z)</option>
+      <option value="costo-asc">Costo (crescente)</option>
+      <option value="costo-desc">Costo (decrescente)</option>
+      <option value="potere-desc">Potere (decrescente)</option>
+      <option value="potere-asc">Potere (crescente)</option>
+      <option value="numero">Numero nel set</option>
+    </select>
+  </label>
+
+  <div class="field">
+    <span class="label">Formato</span>
+    <div class="seg" id="formato" role="group" aria-label="Formato">
+      <button type="button" data-v="" aria-pressed="true">Tutti</button>
+      <button type="button" data-v="TCG" aria-pressed="false">TCG</button>
+      <button type="button" data-v="OCG" aria-pressed="false">OCG</button>
+    </div>
+  </div>
+
+  <button id="reset" class="btn ghost" type="button">Azzera filtri</button>
+</section>
+
+<main>
+  <p class="empty" id="loading">Caricamento delle carte…</p>
+  <div id="cardsView">
+    <div class="setbar" id="setBar" hidden>
+      <span id="setBarName"></span>
+      <button id="setBarClear" class="btn ghost" type="button">Tutti i set ×</button>
+    </div>
+    <ul class="grid" id="grid"></ul>
+    <div id="more" aria-hidden="true"></div>
+  </div>
+  <div id="setsView" hidden>
+    <ul class="grid sets" id="setsList"></ul>
+  </div>
+  <p class="empty" id="empty" hidden>Nessun risultato per questi filtri.</p>
+</main>
+
+<footer class="foot">
+  <p>Vetrina non ufficiale, senza scopo di lucro. I dati testuali provengono dalla
+    <a href="https://duelmasters.fandom.com" target="_blank" rel="noopener">Duel Masters Wiki</a> su Fandom e sono
+    rilasciati con licenza <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC BY-SA</a>.</p>
+  <p>Immagini e marchi © Takara Tomy / Wizards of the Coast. Questo sito è un progetto di fan e non è affiliato ai titolari dei diritti.</p>
+</footer>
+
+<!-- Showcase: one card full screen, like VetrinaMTG -->
+<div id="show" hidden role="dialog" aria-modal="true" aria-label="Carta">
+  <div id="amb" aria-hidden="true"><i></i><i></i></div>
+  <div id="stage">
+    <div id="wrap" class="loading">
+      <button id="cardBtn" type="button" aria-label="Mostra i dettagli della carta">
+        <img id="card" alt="" draggable="false" referrerpolicy="no-referrer">
+        <span id="glare"></span>
+      </button>
+    </div>
+  </div>
+  <p id="pos" aria-live="polite"></p>
+  <section id="variants" aria-label="Varianti della carta">
+    <h2 id="varTitle"></h2>
+    <ul id="varList"></ul>
+  </section>
+  <nav id="dock" aria-label="Comandi carta">
+    <button id="prevBtn" type="button" aria-label="Carta precedente"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button id="infoBtn" type="button" aria-label="Dettagli"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button>
+    <a id="wikiBtn" class="dock-a" target="_blank" rel="noopener" aria-label="Apri sulla wiki"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
+    <button id="nextBtn" type="button" aria-label="Carta successiva"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button id="closeBtn" type="button" aria-label="Torna all'elenco"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </nav>
+  <aside id="sheet" hidden aria-label="Dettagli carta">
+    <button class="close" id="sheetClose" type="button" aria-label="Chiudi dettagli">×</button>
+    <div id="sheetBody"></div>
+  </aside>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

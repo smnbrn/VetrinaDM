@@ -1,0 +1,70 @@
+name: Update data and deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"      # every Monday, 03:17 UTC: re-read the wiki, pick up new sets
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        if: github.event_name != 'push'
+        with:
+          python-version: "3.12"
+
+      - name: Restore the wiki response cache
+        if: github.event_name != 'push'
+        uses: actions/cache@v4
+        with:
+          path: scripts/.cache
+          key: dm-wiki-${{ github.run_id }}
+          restore-keys: dm-wiki-
+
+      - name: Refresh the dataset from the wiki
+        if: github.event_name != 'push'
+        run: python scripts/fetch_cards.py
+
+      - name: Commit changed data
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "vetrinadm-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "Weekly data update from the wiki"
+            git push
+          fi
+
+      - name: Assemble the site
+        run: |
+          mkdir _site
+          cp -r index.html sw.js manifest.webmanifest css js icons data _site/
+          if [ -d images ]; then cp -r images _site/; fi
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

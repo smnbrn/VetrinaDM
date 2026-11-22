@@ -1,0 +1,21 @@
+Data license
+============
+
+The textual card data in data/cards.json (names, rules text, types, races,
+set and rarity information) is derived from the Duel Masters Wiki on Fandom
+(https://duelmasters.fandom.com), whose text content is available under the
+Creative Commons Attribution-ShareAlike 3.0 license (CC BY-SA 3.0):
+https://creativecommons.org/licenses/by-sa/3.0/
+
+Changes made: wikitext markup was parsed and cleaned, fields were normalised
+into a JSON schema, and cards from several wiki pages were merged.
+Individual page histories (authors) are available on each page, linked from
+the `url_wiki` field of every card.
+
+This data file is therefore distributed under the same license (CC BY-SA 3.0).
+
+Images
+------
+Card images and trademarks are (c) Takara Tomy / Wizards of the Coast and are
+NOT covered by this license. This is a non-commercial fan project, not
+affiliated with or endorsed by the rights holders.
