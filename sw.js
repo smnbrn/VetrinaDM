@@ -1,8 +1,8 @@
 // Vetrina DM service worker.
-// - app shell: precached, served cache-first (bump VERSION to ship a new shell)
+// - app shell: precached for offline use, but served network-first so deploys show up immediately
 // - data/*.json: stale-while-revalidate (the weekly job changes them)
 // - card images (local copies or the wiki CDN): cache-first with a size cap
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `shell-${VERSION}`;
 const DATA = "data-v1";
 const IMAGES = "images-v1";
@@ -14,7 +14,7 @@ const SHELL_FILES = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES.map((f) => new Request(f, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {
@@ -64,7 +64,12 @@ self.addEventListener("fetch", (e) => {
       }));
       return;
     }
-    e.respondWith(caches.match(req).then((hit) => hit || fetch(req)));
+    // App code (js/css/manifest/icons): network first so a new deploy is picked up at once,
+    // the cached copy only serves when offline.
+    e.respondWith(
+      fetch(req).then((res) => { if (res.ok) caches.open(SHELL).then((c) => c.put(req, res.clone())); return res; })
+        .catch(() => caches.match(req))
+    );
     return;
   }
 

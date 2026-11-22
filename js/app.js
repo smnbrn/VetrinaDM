@@ -616,5 +616,11 @@
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    // A new service worker took over (new deploy): reload once so the page runs the new code.
+    let hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController) location.reload();
+      hadController = true;
+    });
   }
 })();
