@@ -153,7 +153,7 @@
 
     const s = setMap.get(state.set);
     el.setBar.hidden = !state.set;
-    if (state.set) el.setBarName.textContent = s ? `${s.code} · ${s.nome}` : state.set;
+    if (state.set) el.setBarName.textContent = s ? [`${s.code} · ${s.nome}`, fmtDate(s.data)].filter(Boolean).join(" · ") : state.set;
     if (url) writeUrl();
   }
 
@@ -230,8 +230,10 @@
   function detail(c) {
     const b = c.lato_b;
     const row = (k, v) => (v || v === 0) ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : "";
-    const prints = c.stampe.map((s) =>
-      `<li><button type="button" class="setlink" data-set="${esc(s.set_code)}">${esc(s.set_code)} · ${esc(s.set_nome)}</button><span>${esc([s.numero, s.rarita, s.formato].filter(Boolean).join(" · "))}</span></li>`).join("");
+    const prints = c.stampe.map((s) => {
+      const date = fmtDate((setMap.get(s.set_code) || {}).data);
+      return `<li><span><button type="button" class="setlink" data-set="${esc(s.set_code)}">${esc(s.set_code)} · ${esc(s.set_nome)}</button>${date ? `<br><small>${esc(date)}</small>` : ""}</span><span>${esc([s.numero, s.rarita, s.formato].filter(Boolean).join(" · "))}</span></li>`;
+    }).join("");
     const textBlock = (t, jp) => t ? `<p class="text${jp ? " jp" : ""}">${esc(t)}</p>` : "";
 
     return `<article class="detail">
@@ -490,7 +492,7 @@
     const counts = (arr) => { const m = new Map(); arr.forEach((v) => v && m.set(v, (m.get(v) || 0) + 1)); return m; };
     const types = [...counts(cards.map((c) => c.tipo))].sort((a, b) => b[1] - a[1]);
     fillSelect(el.tipo, "Tutti i tipi", types.map(([t]) => [t, t]));
-    fillSelect(el.set, "Tutti i set", sets.map((s) => [s.code, `${s.code} · ${s.nome}${s.data ? " (" + s.data.slice(0, 4) + ")" : ""}`]));
+    fillSelect(el.set, "Tutti i set", sets.map((s) => [s.code, `${s.code} · ${s.nome}${s.data ? " · " + fmtDate(s.data) : ""}`]));
     const rar = [...counts(cards.flatMap((c) => c.P.map((p) => p[2])))].map(([r]) => r);
     const rank = (r) => { const i = RARITY_ORDER.indexOf(r); return i < 0 ? 99 : i; };
     rar.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));

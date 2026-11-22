@@ -297,3 +297,4 @@ dd { margin: 0; }
 .grid .year { grid-column: 1 / -1; margin: 14px 0 0; padding-bottom: 6px; border-bottom: 1px solid var(--line);
   font-size: 1.1rem; font-weight: 700; color: var(--gold); letter-spacing: .04em; }
 .grid .year:first-child { margin-top: 0; }
+.prints small { color: var(--muted); }
