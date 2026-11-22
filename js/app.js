@@ -125,13 +125,17 @@
   const printNum = (c) => printOf(c)[1];
   const printSet = (c) => printOf(c)[0];
 
+  const setRank = (code) => (setMap.get(code) && setMap.get(code).data) || "9999";
+
   const SORTS = {
     nome: (a, b) => a.nome_en.localeCompare(b.nome_en, "en"),
     "costo-asc": (a, b) => (a.costo == null ? 1e9 : a.costo) - (b.costo == null ? 1e9 : b.costo) || SORTS.nome(a, b),
     "costo-desc": (a, b) => (b.costo == null ? -1 : b.costo) - (a.costo == null ? -1 : a.costo) || SORTS.nome(a, b),
     "potere-desc": (a, b) => (b.potere_num == null ? -1 : b.potere_num) - (a.potere_num == null ? -1 : a.potere_num) || SORTS.nome(a, b),
     "potere-asc": (a, b) => (a.potere_num == null ? 1e9 : a.potere_num) - (b.potere_num == null ? 1e9 : b.potere_num) || SORTS.nome(a, b),
-    numero: (a, b) => natural(printSet(a), printSet(b)) || numKey(printNum(a)) - numKey(printNum(b)) || SORTS.nome(a, b),
+    // by release date of the set (oldest first, undated last), then by number inside the set
+    numero: (a, b) => setRank(printSet(a)).localeCompare(setRank(printSet(b))) || natural(printSet(a), printSet(b)) ||
+      numKey(printNum(a)) - numKey(printNum(b)) || SORTS.nome(a, b),
   };
 
   function apply({ url = true } = {}) {
